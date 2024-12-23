@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BankNifty Replay</title>
+    <!-- Include the TradingView Lightweight Charts library -->
+    <script src="https://unpkg.com/lightweight-charts@3.4.0/dist/lightweight-charts.standalone.production.js"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+        #chart {
+            width: 100%;
+            height: 100vh; /* Full viewport height */
+        }
+         #calendarWidget {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: none;
+            background: white;
+            border: 1px solid #ddd;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 10px;
+            z-index: 1000;
+        }
+        #calendarWidget input {
+            width: 150px;
+        }
+    </style>
+</head>
+<body>
+    <div id="chart"></div>
+    <!-- Floating calendar widget -->
+    <div id="calendarWidget">
+        <label for="datePicker">Select Date and Time:</label>
+        <input type="date" id="datePicker" />
+    </div>
+    <script>
+        // Create the chart with full width and height
+        const chart = LightweightCharts.createChart(document.getElementById('chart'), {
+            width: window.innerWidth,
+            height: window.innerHeight,
+            layout: {
+                backgroundColor: '#FFFFFF',
+                textColor: '#000',
+            },
+            
+            grid: {
+                vertLines: { color: '#eee' },
+                horzLines: { color: '#eee' },
+            },
+            localization: {
+                timezone: 'Asia/Kolkata',
+            },
+           timeScale: {
+                timeVisible: true,
+                secondsVisible: true,  // Ensures it displays smaller intervals accurately
+           },
+        });
+        chart.applyOptions({
+              crosshair: {
+                 mode: LightweightCharts.CrosshairMode.Normal,  // Allows smooth movement
+               }
+          });
+
+        // Adjust chart size when the window is resized
+        window.addEventListener('resize', () => {
+            chart.resize(window.innerWidth, window.innerHeight);
+        });
+
+        // Add a candlestick series
+        const candleSeries = chart.addCandlestickSeries();
+        
+        let currentIndex = 0;  // Track the current index in the dataset
+        let stockData = [];    // Array to hold the stock data
+        // Define the date and time up to which you want to display data (e.g., "2024-10-25T10:00:00Z")
+        dateAndTime = new Date("2022-02-01T09:15:00Z").getTime() / 1000; // Convert to seconds
+
+
+        // Load the stock data from the JSON file
+        fetch('BankNiftyProcessedData.json')
+            .then(response => response.json())
+            .then(data => {
+                stockData= data.map(d => ({
+                    time: (d.time/1000),
+                    open: d.open,
+                    high: d.high,
+                    low: d.low,
+                    close: d.close
+                   }));
+
+                 // Filter data up to the specified dateAndTime
+                currentIndex = stockData.findIndex(d => d.time > dateAndTime);
+                 // Set initial data to the candlestick series
+                if (currentIndex !== -1) {
+                candleSeries.setData(stockData.slice(0,currentIndex));
+                } else {
+                    candleSeries.setData(stockData); // If dateAndTime exceeds the range, load all data
+                }
+        })
+            .catch(error => {
+                console.error('Error loading stock data:', error);
+            });
+            
+        // Function to update the chart with the next data point
+        function updateChart() {
+           if (currentIndex < stockData.length) {
+              candleSeries.setData(stockData.slice(0, currentIndex + 1));  // Update with current data point
+              currentIndex++;  // Move to the next data point
+            }
+        }
+        // Update chart based on the selected date
+        function updateChartbyDate(dateTime) {
+        const fixedTime = "09:14:00";
+        const selectedDateTime = new Date(`${dateTime}T${fixedTime}Z`).getTime() / 1000; // Convert to seconds
+            currentIndex = stockData.findIndex(d => d.time > selectedDateTime);
+            if (currentIndex !== -1) {
+                candleSeries.setData(stockData.slice(0, currentIndex));
+            } else {
+                candleSeries.setData(stockData);
+            }
+        }
+
+       // Event listener for keydown
+         document.addEventListener('keydown', (event) => {
+             if (event.key === 'ArrowRight') {  // Check if the right arrow key is pressed
+             updateChart();  // Update the chart to the next data point
+             // Save the current time in localStorage after updating
+        const currentTime = stockData[currentIndex]?.time;
+        if (currentTime) {
+            localStorage.setItem('sharedTime', currentTime);
+        }
+             }
+         });
+         // Show/hide calendar widget on key press
+        const calendarWidget = document.getElementById('calendarWidget');
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'd') { // Toggle calendar on 'C' key
+                calendarWidget.style.display =
+                    calendarWidget.style.display === 'none' ? 'block' : 'none';
+                    
+            }
+        });
+        // Listen for date selection
+        document.getElementById('datePicker').addEventListener('change', (event) => {
+            const selectedDateTime = event.target.value;
+            if (selectedDateTime){
+            updateChartbyDate(selectedDateTime);
+            calendarWidget.style.display = 'none'; // Hide calendar after selection
+            }
+        });
+let scrollOffset = 0;
+
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'z') {  // Scroll left with 'z'
+        scrollOffset -= 300;  // Adjust the value for smooth scrolling
+        chart.timeScale().scrollToPosition(scrollOffset, false);
+    } else if (event.key === 'x') {  // Scroll right with 'x'
+        scrollOffset += 300;  // Adjust the value for smooth scrolling
+        chart.timeScale().scrollToPosition(scrollOffset, false);
+    }
+});
+
+
+    </script>
+</body>
+</html>

@@ -33,7 +33,7 @@
             width: 150px;
         }
         /* Button Styles */
-        .button-widget {
+        .button-widget {        
             position: fixed;
             background-color: #4CAF50;
             color: white;
@@ -45,10 +45,19 @@
             text-align: center;
             transition: transform 0.3s ease;
         }
-        #menu-button {
-            top: 10px;
-            left: 10px;
-        }
+       #menu-button {
+    position: absolute; /* Ensure it stays above other content */
+    top: 10px; /* Distance from the top */
+    left: 10px; /* Distance from the left */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    font-size: 18px;
+    border-radius: 5px;
+    cursor: pointer;
+    z-index: 1001; /* Higher than other elements */
+}
         #middle-button {
             bottom: 10px;
             left: 50%;

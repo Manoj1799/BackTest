@@ -44,6 +44,7 @@
             cursor: pointer;
             text-align: center;
             transition: transform 0.3s ease;
+            user-select: none; /* Prevent text selection */
         }
        #menu-button {
     position: absolute; /* Ensure it stays above other content */
@@ -77,7 +78,7 @@
         <input type="date" id="datePicker" />
     </div>
     <div id="menu-button" class="button-widget">☰</div>
-    <div id="middle-button" class="hidden button-widget">🔽</div>
+    <div id="middle-button" class="hidden button-widget">➡️</div>
     <script>
         // Create the chart
         const chart = LightweightCharts.createChart(document.getElementById('chart'), {
@@ -130,13 +131,32 @@
             calendarWidget.style.display = isHidden ? 'block' : 'none';
         });
 
-        // Replay function
-        middleButton.addEventListener('click', () => {
+          // Replay function
+middleButton.addEventListener('touchstart', () => {
+    isPressing = true;
+    if (currentIndex < stockData.length) {
+                candleSeries.setData(stockData.slice(0, currentIndex + 1));
+                currentIndex++;
+            }
+    longPressInterval = setInterval(() => {
+        if (isPressing) {
             if (currentIndex < stockData.length) {
                 candleSeries.setData(stockData.slice(0, currentIndex + 1));
                 currentIndex++;
             }
-        });
+        }
+    }, 300);
+});
+
+middleButton.addEventListener('touchend', () => {
+    isPressing = false;
+    clearInterval(longPressInterval);
+});
+
+middleButton.addEventListener('touchcancel', () => {
+    isPressing = false;
+    clearInterval(longPressInterval);
+});
 
         // Handle date selection
         document.getElementById('datePicker').addEventListener('change', (event) => {

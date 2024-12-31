@@ -62,7 +62,7 @@
         let stockData = [];    // Array to hold the stock data
 
         // Load the stock data from the JSON file
-        fetch('/BankNiftyProcessedData.json')
+        fetch('NiftyProcessedData.json')
             .then(response => {
             if (!response.ok) {
             throw new Error('Network response was not ok: ' + response.statusText);

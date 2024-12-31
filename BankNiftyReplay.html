@@ -136,12 +136,22 @@ middleButton.addEventListener('touchstart', () => {
     isPressing = true;
     if (currentIndex < stockData.length) {
                 candleSeries.setData(stockData.slice(0, currentIndex + 1));
+        const currentTime = stockData[currentIndex]?.time;
+        if (currentTime) {
+            localStorage.setItem('sharedTime', currentTime);
+        }
+        
                 currentIndex++;
             }
     longPressInterval = setInterval(() => {
         if (isPressing) {
             if (currentIndex < stockData.length) {
                 candleSeries.setData(stockData.slice(0, currentIndex + 1));
+                const currentTime = stockData[currentIndex]?.time;
+        if (currentTime) {
+            localStorage.setItem('sharedTime', currentTime);
+        }
+        
                 currentIndex++;
             }
         }

@@ -32,6 +32,42 @@
         #calendarWidget input {
             width: 150px;
         }
+       /* Button Styles */
+        .button-widget {
+         position: fixed;
+         background-color: #4CAF50;
+         color: white;
+         border: none;
+         padding: 10px 15px;
+         font-size: 18px;
+         border-radius: 5px;
+         cursor: pointer;
+         text-align: center;
+         transition: transform 0.3s ease;
+        }
+        /* Menu Button */
+       #menu-button {
+       top: 10px;
+       left: 10px;
+       }
+
+      /* Corner Button */
+     #corner-button {
+      bottom: 10px;
+      left: 10px;
+      }
+
+     /* Middle Button */
+     #middle-button {
+     bottom: 10px;
+     left: 50%;
+     transform: translate(-50%);
+     }
+
+    /* Initially Hidden */
+    .hidden {
+    display: none;
+    }
     </style>
 </head>
 <body>
@@ -41,6 +77,9 @@
         <label for="datePicker">Select Date and Time:</label>
         <input type="date" id="datePicker" />
     </div>
+    <div id="menu-button" class="button-widget">☰</div>
+    <div id="middle-button" class="hidden button-widget">🔽</div>
+
     <script>
         // Create the chart with full width and height
         const chart = LightweightCharts.createChart(document.getElementById('chart'), {
@@ -127,27 +166,28 @@
             }
         }
 
-       // Event listener for keydown
-         document.addEventListener('keydown', (event) => {
-             if (event.key === 'ArrowRight') {  // Check if the right arrow key is pressed
-             updateChart();  // Update the chart to the next data point
-             // Save the current time in localStorage after updating
-        const currentTime = stockData[currentIndex]?.time;
-        if (currentTime) {
-            localStorage.setItem('sharedTime', currentTime);
-        }
+// Select the main button and the hidden buttons
+const menuButton = document.getElementById('menu-button');
+const middleButton = document.getElementById('middle-button');
+const calendarWidget = document.getElementById('calendarWidget');
+// Toggle function
+menuButton.addEventListener('click', () => {
+    if (middleButton.classList.contains('hidden')) {
+        middleButton.classList.remove('hidden');
+        calendarWidget.style.display = 'block'; // Show calendar widget
+    } else {
+        middleButton.classList.add('hidden');
+        calendarWidget.style.display = 'none'; // Hide calendar widget
+    }
+    });
+});
+// Replay function
+         middleButton.addEventListener('click', () => {
+            updateChart();  // Update the chart to the next data point
+            
              }
          });
-         // Show/hide calendar widget on key press
-        const calendarWidget = document.getElementById('calendarWidget');
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'd') { // Toggle calendar on 'C' key
-                calendarWidget.style.display =
-                    calendarWidget.style.display === 'none' ? 'block' : 'none';
-                    
-            }
-        });
-        // Listen for date selection
+// Listen for date selection
         document.getElementById('datePicker').addEventListener('change', (event) => {
             const selectedDateTime = event.target.value;
             if (selectedDateTime){
@@ -155,19 +195,6 @@
             calendarWidget.style.display = 'none'; // Hide calendar after selection
             }
         });
-let scrollOffset = 0;
-
-document.addEventListener('keydown', (event) => {
-    if (event.key === 'z') {  // Scroll left with 'z'
-        scrollOffset -= 300;  // Adjust the value for smooth scrolling
-        chart.timeScale().scrollToPosition(scrollOffset, false);
-    } else if (event.key === 'x') {  // Scroll right with 'x'
-        scrollOffset += 300;  // Adjust the value for smooth scrolling
-        chart.timeScale().scrollToPosition(scrollOffset, false);
-    }
-});
-
-
     </script>
 </body>
 </html>

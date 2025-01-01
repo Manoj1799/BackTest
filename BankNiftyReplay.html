@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BankNifty Replay</title>
+    <!-- Include the TradingView Lightweight Charts library -->
+    <script src="https://unpkg.com/lightweight-charts@3.4.0/dist/lightweight-charts.standalone.production.js"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+        #chart {
+            width: 100%;
+            height: 100vh; /* Full viewport height */
+        }
+        #calendarWidget {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: none;
+            background: white;
+            border: 1px solid #ddd;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 10px;
+            z-index: 1000;
+        }
+        #calendarWidget input {
+            width: 150px;
+        }
+        /* Button Styles */
+        .button-widget {        
+            position: fixed;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            font-size: 18px;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+            transition: transform 0.3s ease;
+            user-select: none; /* Prevent text selection */
+        }
+       #menu-button {
+    position: absolute; /* Ensure it stays above other content */
+    top: 10px; /* Distance from the top */
+    left: 10px; /* Distance from the left */
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    font-size: 18px;
+    border-radius: 5px;
+    cursor: pointer;
+    z-index: 1001; /* Higher than other elements */
+}
+        #middle-button {
+             position: absolute; /* Ensure it stays above other content */
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+             z-index: 1000;
+        }
+        .hidden {
+            display: none;
+        }
+        #priceInputBox {
+            display: none; /* Hidden initially */
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: white;
+            padding: 10px;
+            border: 1px solid #ddd;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000
+        }
+
+        #priceInput {
+            width: 100px;
+            padding: 5px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div id="chart"></div>
+    <div id="calendarWidget">
+        <label for="datePicker">Select Date:</label>
+        <input type="date" id="datePicker" />
+    </div>
+    <div id="menu-button" class="button-widget">☰</div>
+    <div id="middle-button" class="hidden button-widget">➡️</div>
+    <!-- Hidden input box for entering price -->
+    <div id="priceInputBox">
+        <input type="number" id="priceInput" placeholder="Enter price" />
+       
+    </div>
+    
+    <script>
+        // Create the chart
+        const chart = LightweightCharts.createChart(document.getElementById('chart'), {
+            width: window.innerWidth,
+            height: window.innerHeight,
+            layout: { backgroundColor: '#FFF', textColor: '#000' },
+            grid: {
+                vertLines: { color: '#eee' },
+                horzLines: { color: '#eee' },
+            },
+            localization: { timezone: 'Asia/Kolkata' },
+            timeScale: { timeVisible: true, secondsVisible: true },
+        });
+        chart.applyOptions({
+              crosshair: {
+                 mode: LightweightCharts.CrosshairMode.Normal,  // Allows smooth movement
+               }
+          });
+          // Adjust chart size when the window is resized
+        window.addEventListener('resize', () => {
+            chart.resize(window.innerWidth, window.innerHeight);
+        });
+
+        const candleSeries = chart.addCandlestickSeries();
+
+        // Load data
+        let currentIndex = 0;
+        let stockData = [];
+        fetch('BankNiftyProcessedData.json')
+            .then(response => response.json())
+            .then(data => {
+                stockData = data.map(d => ({
+                    time: d.time / 1000,
+                    open: d.open,
+                    high: d.high,
+                    low: d.low,
+                    close: d.close,
+                }));
+                candleSeries.setData(stockData);
+            });
+
+        // Update chart based on date
+        const updateChartByDate = (dateTime) => {
+            const selectedDateTime = new Date(`${dateTime}T09:14:00Z`).getTime() / 1000;
+            currentIndex = stockData.findIndex(d => d.time > selectedDateTime);
+            if (currentIndex !== -1) {
+                candleSeries.setData(stockData.slice(0, currentIndex));
+            }
+        };
+
+        // Select buttons
+        const menuButton = document.getElementById('menu-button');
+        const middleButton = document.getElementById('middle-button');
+        const calendarWidget = document.getElementById('calendarWidget');
+
+        // Toggle middle button and calendar
+        menuButton.addEventListener('click', () => {
+            const isHidden = middleButton.classList.contains('hidden');
+            middleButton.classList.toggle('hidden', !isHidden);
+            calendarWidget.style.display = isHidden ? 'block' : 'none';
+        });
+
+          // Replay function
+middleButton.addEventListener('touchstart', () => {
+    isPressing = true;
+    if (currentIndex < stockData.length) {
+                candleSeries.setData(stockData.slice(0, currentIndex + 1));
+                currentIndex++;
+            }
+    longPressInterval = setInterval(() => {
+        if (isPressing) {
+            if (currentIndex < stockData.length) {
+                candleSeries.setData(stockData.slice(0, currentIndex + 1));
+                currentIndex++;
+            }
+        }
+    }, 100);
+});
+
+middleButton.addEventListener('touchend', () => {
+    isPressing = false;
+    clearInterval(longPressInterval);
+});
+
+middleButton.addEventListener('touchcancel', () => {
+    isPressing = false;
+    clearInterval(longPressInterval);
+});
+
+        // Handle date selection
+        document.getElementById('datePicker').addEventListener('change', (event) => {
+            const selectedDate = event.target.value;
+            if (selectedDate) {
+                updateChartByDate(selectedDate);
+                calendarWidget.style.display = 'none'; // Hide after date selection
+            }
+        });
+
+        // Create a "+" button for adding horizontal lines
+const plusButton = document.createElement('button');
+plusButton.innerHTML = '+';
+plusButton.style.position = 'absolute';
+plusButton.style.display = 'none';
+plusButton.style.zIndex = '1000';
+plusButton.style.padding = '5px 10px';
+plusButton.style.backgroundColor = '#4CAF50';
+plusButton.style.color = '#fff';
+plusButton.style.border = 'none';
+plusButton.style.borderRadius = '3px';
+plusButton.style.cursor = 'pointer';
+document.body.appendChild(plusButton);
+
+// Function to show the "+" button at the hovered price
+chart.subscribeCrosshairMove((param) => {
+    if (param.point && param.seriesPrices.size > 0) {
+            const chartRect = document.getElementById('chart').getBoundingClientRect();
+            plusButton.style.left = `${chartRect.right - 100}px`; // Adjust button position
+            plusButton.style.top = `${param.point.y + chartRect.top - 10}px`; // Align with price
+            plusButton.style.display = 'block';
+
+            // On clicking the "+" button, add a horizontal line
+            plusButton.onclick = () => {
+                addHorizontalLine();
+            };
+        
+    } else {
+        plusButton.style.display = 'none'; // Hide "+" button when not hovering
+    }
+});
+// Add a horizontal line at the static price
+let priceLines = [];
+
+        const priceInputBox = document.getElementById('priceInputBox');
+        const priceInput = document.getElementById('priceInput');
+        function addHorizontalLine(){
+             // Toggle visibility of the price input box
+             if (priceInputBox.style.display === 'none') {
+                    priceInput.value = '';
+                    priceInputBox.style.display = 'block';
+                    priceInput.focus(); // Focus on the input field for easy typing
+                } else {
+                    priceInputBox.style.display = 'none';
+                }
+
+        }
+      
+
+        priceInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                const initialprice = parseFloat(priceInput.value);
+                 if (!isNaN(initialprice)) {
+             togglePriceLine(initialprice);
+                // You can now use this value (price) in your code
+            } else {
+                alert('Please enter a valid price');
+            }
+            // Hide the input box after submitting
+            priceInputBox.style.display = 'none';
+            }
+        });
+
+
+        function togglePriceLine(price) {
+    // Check if a price line already exists for this price
+    const existingPriceLine = priceLines.find(line => line.la.xi.price === price);
+   
+    if (existingPriceLine) {
+        // If it exists, remove the price line
+        candleSeries.removePriceLine(existingPriceLine);
+        // Remove it from the array
+        priceLines = priceLines.filter(line => line !== existingPriceLine);
+    } else {
+        // If it doesn't exist, add a new price line
+        const priceLine = candleSeries.createPriceLine({
+            price: price,
+            color: 'blue',
+            lineWidth: 2,
+            lineStyle: LightweightCharts.LineStyle.Solid,
+            axisLabelVisible: true
+        });
+        priceLines.push(priceLine); // Add the new price line to the array
+    }
+}
+    </script>
+</body>
+</html>

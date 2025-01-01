@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nifty Replay</title>
+    <!-- Include the TradingView Lightweight Charts library -->
+    <script src="https://unpkg.com/lightweight-charts@3.4.0/dist/lightweight-charts.standalone.production.js"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+        #chart {
+            width: 100%;
+            height: 100vh; /* Full viewport height */
+        }
+        #priceInputBox {
+            display: none; /* Hidden initially */
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: white;
+            padding: 10px;
+            border: 1px solid #ddd;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000
+        }
+
+        #priceInput {
+            width: 100px;
+            padding: 5px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div id="chart"></div>
+    <!-- Hidden input box for entering price -->
+    <div id="priceInputBox">
+        <input type="number" id="priceInput" placeholder="Enter price" />
+      
+    <script>
+        // Create the chart with full width and height
+        const chart = LightweightCharts.createChart(document.getElementById('chart'), {
+            width: window.innerWidth,
+            height: window.innerHeight,
+            layout: {
+                backgroundColor: '#FFFFFF',
+                textColor: '#000',
+            },
+            
+            grid: {
+                vertLines: { color: '#eee' },
+                horzLines: { color: '#eee' },
+            },
+            localization: {
+                timezone: 'Asia/Kolkata',
+            },
+           timeScale: {
+                timeVisible: true,
+                secondsVisible: true,  // Ensures it displays smaller intervals accurately
+           },
+        });
+        chart.applyOptions({
+              crosshair: {
+                 mode: LightweightCharts.CrosshairMode.Normal,  // Allows smooth movement
+               }
+          });
+
+        // Adjust chart size when the window is resized
+        window.addEventListener('resize', () => {
+            chart.resize(window.innerWidth, window.innerHeight);
+        });
+
+        // Add a candlestick series
+        const candleSeries = chart.addCandlestickSeries();
+        
+        let currentIndex = 0;  // Track the current index in the dataset
+        let stockData = [];    // Array to hold the stock data
+
+        // Load the stock data from the JSON file
+        fetch('NiftyProcessedData.json')
+            .then(response => {
+            if (!response.ok) {
+            throw new Error('Network response was not ok: ' + response.statusText);
+        }
+        return response.json();
+    })
+            .then(data => {
+                stockData= data.map(d => ({
+                    time: (d.time/1000),
+                    open: d.open,
+                    high: d.high,   
+                    low: d.low,
+                    close: d.close
+                   }));
+                 
+                // Set initial data to the candlestick series
+                if (stockData.length > 0) {
+                candleSeries.setData(stockData.slice(0,currentIndex+1));
+                }
+        })
+            .catch(error => {
+                console.error('Error loading stock data:', error);
+            });
+            
+        
+      window.addEventListener('storage', (event) => {
+         if (event.key === 'sharedTime') {
+            const newTime = parseInt(event.newValue, 10);
+        // Update the chart to the new time
+            currentIndex = stockData.findIndex(d => d.time >= newTime);
+            candleSeries.setData(stockData.slice(0, currentIndex+1));
+         }
+      }); 
+        // Create a "+" button for adding horizontal lines
+const plusButton = document.createElement('button');
+plusButton.innerHTML = '+';
+plusButton.style.position = 'absolute';
+plusButton.style.display = 'none';
+plusButton.style.zIndex = '1000';
+plusButton.style.padding = '5px 10px';
+plusButton.style.backgroundColor = '#4CAF50';
+plusButton.style.color = '#fff';
+plusButton.style.border = 'none';
+plusButton.style.borderRadius = '3px';
+plusButton.style.cursor = 'pointer';
+document.body.appendChild(plusButton);
+
+// Function to show the "+" button at the hovered price
+chart.subscribeCrosshairMove((param) => {
+    if (param.point && param.seriesPrices.size > 0) {
+            const chartRect = document.getElementById('chart').getBoundingClientRect();
+            plusButton.style.left = `${chartRect.right - 100}px`; // Adjust button position
+            plusButton.style.top = `${param.point.y + chartRect.top - 10}px`; // Align with price
+            plusButton.style.display = 'block';
+
+            // On clicking the "+" button, add a horizontal line
+            plusButton.onclick = () => {
+                addHorizontalLine();
+            };
+        
+    } else {
+        plusButton.style.display = 'none'; // Hide "+" button when not hovering
+    }
+});
+// Add a horizontal line at the static price
+let priceLines = [];
+
+        const priceInputBox = document.getElementById('priceInputBox');
+        const priceInput = document.getElementById('priceInput');
+        function addHorizontalLine(){
+             // Toggle visibility of the price input box
+             if (priceInputBox.style.display === 'none') {
+                    priceInput.value = '';
+                    priceInputBox.style.display = 'block';
+                    priceInput.focus(); // Focus on the input field for easy typing
+                } else {
+                    priceInputBox.style.display = 'none';
+                }
+
+        }
+      
+
+        priceInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                const initialprice = parseFloat(priceInput.value);
+                 if (!isNaN(initialprice)) {
+             togglePriceLine(initialprice);
+                // You can now use this value (price) in your code
+            } else {
+                alert('Please enter a valid price');
+            }
+            // Hide the input box after submitting
+            priceInputBox.style.display = 'none';
+            }
+        });
+
+
+        function togglePriceLine(price) {
+    // Check if a price line already exists for this price
+    const existingPriceLine = priceLines.find(line => line.la.xi.price === price);
+   
+    if (existingPriceLine) {
+        // If it exists, remove the price line
+        candleSeries.removePriceLine(existingPriceLine);
+        // Remove it from the array
+        priceLines = priceLines.filter(line => line !== existingPriceLine);
+    } else {
+        // If it doesn't exist, add a new price line
+        const priceLine = candleSeries.createPriceLine({
+            price: price,
+            color: 'blue',
+            lineWidth: 2,
+            lineStyle: LightweightCharts.LineStyle.Solid,
+            axisLabelVisible: true
+        });
+        priceLines.push(priceLine); // Add the new price line to the array
+    }
+}
+
+    </script>
+</body>
+</html>

@@ -293,7 +293,17 @@ let priceLines = [];
         priceLines.push(priceLine); // Add the new price line to the array
     }
 }
+    
+document.addEventListener('touchmove', function (event) {
+  if (event.scale !== 1) event.preventDefault();
+}, { passive: false });
+
+document.addEventListener('gesturestart', function (event) {
+  event.preventDefault();
+});
+
     </script>
 </body>
 </html>
+
 
